@@ -72,6 +72,11 @@ $(document).ready(function()
     return i < 0 ? 0 : Math.sqrt(i);
   }
 
+  var modePick = null;
+  const MODE_REMOVE = "REMOVE";
+  const MODE_RESTORE = "RESTORE";
+  const MODE_DRAW_TEXT = "DRAW_TEXT";
+
   var imageUrl = null;
 
   var imgSrc;
@@ -85,10 +90,12 @@ $(document).ready(function()
 
   var stackPreProcess = [
     // {
+    //   mode: MODE_REMOVE,
     //   color: [255, 255, 255],
     //   threshold: 10
     // },
     // {
+    //   mode: MODE_REMOVE,
     //   color: [0, 0, 0],
     //   threshold: 10
     // }
@@ -105,17 +112,7 @@ $(document).ready(function()
 		init(url);
   });
 
-  $('#btn-remove-color').click(function(e)
-  {
-    if (!imageUrl)
-    {
-      return;
-    }
-
-    startModRemoveColor();
-  });
-
-  $('#btn-remove-undo').click(function(e)
+  $('#btn-op-undo').click(function(e)
   {
     if (!stack.length)
     {
@@ -128,7 +125,7 @@ $(document).ready(function()
     updateStackChange();
   });
 
-  $('#btn-remove-redo').click(function(e)
+  $('#btn-op-redo').click(function(e)
   {
     if (!stackRedo.length)
     {
@@ -142,9 +139,58 @@ $(document).ready(function()
     updateStackChange();
   });
 
-  function getThreshold()
+  $('#btn-remove-color').click(function(e)
   {
-    return parseInt(document.querySelector(`#threshold`).value);
+    if (!imageUrl)
+    {
+      return;
+    }
+
+    startModRemoveColor();
+  });
+
+  $('#btn-restore-color').click(function(e)
+  {
+    if (!imageUrl)
+    {
+      return;
+    }
+
+    startModRestoreColor();
+  });
+
+  $('#btn-draw-text').click(function(e)
+  {
+    if (!imageUrl)
+    {
+      return;
+    }
+
+    var text = $('#text-string').val();
+    var font = $('#text-font').val();
+    var color = $('#text-color').val();
+
+    var align = $('#text-align').val();
+    var baseline = $('#text-baseline').val();
+
+    var relPosX = $("#pos-x").val();
+    var relPosY = $("#pos-y").val();
+
+    var mod = createModifierDrawText(text, font, color, align, baseline, relPosX, relPosY);
+    addStackModifier(mod);
+
+    updateStackChange();
+    updateButtonUndoRedo();
+  });
+
+  function getThresholdRemove()
+  {
+    return parseInt(document.querySelector(`#threshold-remove`).value);
+  }
+
+  function getThresholdRestore()
+  {
+    return parseInt(document.querySelector(`#threshold-restore`).value);
   }
 
 	function canvasLoadImage(url, canvasEl)
@@ -167,6 +213,25 @@ $(document).ready(function()
     context.putImageData(pixels, 0, 0);
   }
 
+  function canvasDrawText(canvasEl, opt)
+  {
+    var ctx = canvasEl.getContext("2d");
+
+    ctx.font = opt.font;
+
+    ctx.textAlign = opt.align;
+    ctx.textBaseline = opt.baseline;
+
+    ctx.fillStyle = opt.color;
+
+    // var posX = (canvasEl.width/100) * opt.relPosX*100;
+    // var posY = (canvasEl.height/100) * opt.relPosY*100;
+    var posX = canvasEl.width * opt.relPosX;
+    var posY = canvasEl.height * opt.relPosY;
+
+    ctx.fillText(opt.text, posX, posY);
+  }
+
   function init(url)
   {
     imageUrl = url;
@@ -179,6 +244,7 @@ $(document).ready(function()
     colorSamplerOff();
 
     updateStackChange();
+
     updateButtonUndoRedo();
   }
 
@@ -226,12 +292,28 @@ $(document).ready(function()
   {
     console.log(color);
 
-    var threshold = getThreshold();
-    var mod = createModifier(color, threshold)
+    if (!modePick)
+    {
+      console.log("ERROR");
+    }
+    else if(modePick == MODE_REMOVE)
+    {
+      var threshold = getThresholdRemove();
+      var mod = createModifierRemove(color, threshold);
 
-    addStackModifier(mod);
+      addStackModifier(mod);
 
-    endModRemoveColor();
+      endModRemoveColor();
+    }
+    else if(modePick == MODE_RESTORE)
+    {
+      var threshold = getThresholdRestore();
+      var mod = createModifierRestore(color, threshold);
+
+      addStackModifier(mod);
+
+      endModRestoreColor();
+    }
 
     updateStackChange();
 
@@ -246,22 +328,33 @@ $(document).ready(function()
     };
   }
 
-  function createModifierKeep(color, threshold)
-  {
-    return {
-      "type": "+",
-      "color": color,
-      "threshold": threshold,
-    };
-  }
-
   function createModifierRemove(color, threshold)
   {
-    return {
-      "type": "-",
-      "color": color,
-      "threshold": threshold,
+    var mod = createModifier(color, threshold);
+    mod['mode'] = MODE_REMOVE;
+    return mod;
+  }
+
+  function createModifierRestore(color, threshold)
+  {
+    var mod = createModifier(color, threshold);
+    mod['mode'] = MODE_RESTORE;
+    return mod;
+  }
+
+  function createModifierDrawText(text, font, color, align, baseline, relPosX, relPosY)
+  {
+    var mod = {
+      mode: MODE_DRAW_TEXT,
+      text: text,
+      font: font,
+      color: color,
+      align: align,
+      baseline: baseline,
+      relPosX: relPosX,
+      relPosY: relPosY
     };
+    return mod;
   }
 
   function addStackModifier(mod)
@@ -306,10 +399,53 @@ $(document).ready(function()
 
   function equal2Modifiers(a, b)
   {
-    return a.threshold == b.threshold &&
-      a.color[0] == b.color[0] &&
-      a.color[1] == b.color[1] &&
-      a.color[2] == b.color[2];
+    // return a.threshold == b.threshold &&
+    //   a.color[0] == b.color[0] &&
+    //   a.color[1] == b.color[1] &&
+    //   a.color[2] == b.color[2] &&
+    //   a.mode == b.mode;
+
+    // return object_equals(a, b);
+
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+
+  function object_equals(x, y)
+  {
+    if (x === y) return true;
+    // if both x and y are null or undefined and exactly the same
+
+    if (!(x instanceof Object) || !(y instanceof Object)) return false;
+    // if they are not strictly equal, they both need to be Objects
+
+    if (x.constructor !== y.constructor) return false;
+    // they must have the exact same prototype chain, the closest we can do is
+    // test there constructor.
+
+    for (var p in x)
+    {
+      if (!x.hasOwnProperty(p)) continue;
+      // other properties were tested using x.constructor === y.constructor
+
+      if (!y.hasOwnProperty(p)) return false;
+      // allows to compare x[ p ] and y[ p ] when set to undefined
+
+      if (x[p] === y[p]) continue;
+      // if they have the same strict value or identity then they are equal
+
+      if (typeof(x[p]) !== "object") return false;
+      // Numbers, Strings, Functions, Booleans must be strictly equal
+
+      if (!object_equals(x[p], y[p])) return false;
+      // Objects and Arrays must be tested recursively
+    }
+
+    for (p in y)
+      if (y.hasOwnProperty(p) && !x.hasOwnProperty(p))
+        return false;
+    // allows x[ p ] to be set to undefined
+
+    return true;
   }
 
   function updateStackChange()
@@ -319,9 +455,22 @@ $(document).ready(function()
       var pixels = getCanvasPixels(canvasSrc);
 
       pixels = processImageStackModifiers(pixels, stackPreProcess);
-      pixels = processImageStackModifiers(pixels, stack);
+
+      var stackRemoveRestoreColor = stack.filter(function(m)
+      {
+        return m.mode == MODE_REMOVE || m.mode == MODE_RESTORE;
+      });
+
+      pixels = processImageStackModifiers(pixels, stackRemoveRestoreColor);
 
       canvasPutImage(canvasDst, pixels);
+
+      var stackDraw = stack.filter(function(m)
+      {
+        return m.mode == MODE_DRAW_TEXT;
+      });
+
+      processImageStackModifiersToCanvas(canvasDst, stackDraw);
     }
 
     // setTimeout(function()
@@ -342,44 +491,82 @@ $(document).ready(function()
   {
     if (stack.length)
     {
-      // $('#btn-remove-undo').show();
-      // $('#btn-remove-undo').css('visibility', 'visible');
-      $('#btn-remove-undo').removeAttr("disabled");
+      // $('#btn-op-undo').show();
+      // $('#btn-op-undo').css('visibility', 'visible');
+      $('#btn-op-undo').removeAttr("disabled");
     }
     else
     {
-      // $('#btn-remove-undo').hide();
-      // $('#btn-remove-undo').css('visibility', 'hidden');
-      $('#btn-remove-undo').attr("disabled", true);
+      // $('#btn-op-undo').hide();
+      // $('#btn-op-undo').css('visibility', 'hidden');
+      $('#btn-op-undo').attr("disabled", true);
     }
 
     if (stackRedo.length)
     {
-      // $('#btn-remove-redo').show();
-      // $('#btn-remove-redo').css('visibility', 'visible');
-      $('#btn-remove-redo').removeAttr("disabled");
+      // $('#btn-op-redo').show();
+      // $('#btn-op-redo').css('visibility', 'visible');
+      $('#btn-op-redo').removeAttr("disabled");
     }
     else
     {
-      // $('#btn-remove-redo').hide();
-      // $('#btn-remove-redo').css('visibility', 'hidden');
-      $('#btn-remove-redo').attr("disabled", true);
+      // $('#btn-op-redo').hide();
+      // $('#btn-op-redo').css('visibility', 'hidden');
+      $('#btn-op-redo').attr("disabled", true);
     }
+  }
+
+  function buttonsDisable()
+  {
+    $('#btn-remove-color').attr("disabled", true);
+    $('#btn-restore-color').attr("disabled", true);
+    $('#btn-draw-text').attr("disabled", true);
+
+    $('#btn-remove-undo').attr("disabled", true);
+    $('#btn-remove-redo').attr("disabled", true);
+  }
+
+  function buttonsEnable()
+  {
+    $('#btn-remove-color').removeAttr("disabled");
+    $('#btn-restore-color').removeAttr("disabled");
+    $('#btn-draw-text').removeAttr("disabled");
+
+    updateButtonUndoRedo();
   }
 
   function startModRemoveColor()
   {
-    $('#btn-remove-color').attr("disabled", true);
+    modePick = MODE_REMOVE;
 
-    $('#btn-remove-undo').attr("disabled", true);
-    $('#btn-remove-redo').attr("disabled", true);
+    buttonsDisable();
 
     colorSamplerOn();
   }
 
   function endModRemoveColor()
   {
-    $('#btn-remove-color').removeAttr("disabled");
+    modePick = null;
+
+    buttonsEnable();
+
+    colorSamplerOff();
+  }
+
+  function startModRestoreColor()
+  {
+    modePick = MODE_RESTORE;
+
+    buttonsDisable();
+
+    colorSamplerOn();
+  }
+
+  function endModRestoreColor()
+  {
+    modePick = null;
+
+    buttonsEnable();
 
     colorSamplerOff();
   }
@@ -438,12 +625,54 @@ $(document).ready(function()
     return pixels;
   }
 
+  function processRestoreImageColorThreshold(pixels, color, threshold)
+  {
+    var labTarget = rgb2lab(color);
+
+    var pixelsData = pixels.data;
+
+    for (var i = 0, len = pixelsData.length; i < len; i += 4)
+    {
+      var r = pixelsData[i];
+      var g = pixelsData[i + 1];
+      var b = pixelsData[i + 2];
+      if (pixelsData[i + 3] <= 1)
+      {
+        var labPix = rgb2lab([r, g, b]);
+        var valDelta = deltaE(labTarget, labPix)
+
+        if (valDelta < threshold)
+        {
+          pixelsData[i + 3] = 255;
+        }
+      }
+    }
+
+    return pixels;
+  }
+
   function processImageModifier(pixels, mod)
   {
     var color = mod.color;
     var threshold = mod.threshold;
 
-    return processRemoveImageColorThreshold(pixels, color, threshold);
+    var mode = mod.mode;
+    if (!mode)
+    {
+      return pixels;
+    }
+
+    if (mode == MODE_REMOVE)
+    {
+      return processRemoveImageColorThreshold(pixels, color, threshold);
+    }
+
+    if (mode == MODE_RESTORE)
+    {
+      return processRestoreImageColorThreshold(pixels, color, threshold);
+    }
+
+    return pixels;
   }
 
   function processImageStackModifiers(pixels, stack)
@@ -455,6 +684,26 @@ $(document).ready(function()
     }
 
     return pixels;
+  }
+
+  function processImageStackModifiersToCanvas(canvas, stack)
+  {
+    for (let index = 0; index < stack.length; index++)
+    {
+      var mod = stack[index];
+
+      if (mod.mode == MODE_REMOVE || mod.mode == MODE_RESTORE)
+      {
+        var pixels = getCanvasPixels(canvas);
+        pixels = processImageModifier(pixels, mod);
+        canvasPutImage(canvasDst, pixels);
+      }
+      else if (mod.mode == MODE_DRAW_TEXT)
+      {
+        var opt = mod;
+        canvasDrawText(canvas, opt);
+      }
+    }
   }
 
   function showDownloadImageButton()

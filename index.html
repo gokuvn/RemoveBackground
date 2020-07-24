@@ -20,7 +20,7 @@
 <div>
 
   <div style="text-align: center;">
-    <h5>Choose an image</h5>
+    <h1>Choose an image</h1>
     <input type="file" id="input-image">
   </div>
 
@@ -49,21 +49,97 @@
 
       <div>
         <div style="display: inline-block;">
-          <button id="btn-remove-undo">Undo</button>
+          <button id="btn-op-undo" style="width: 100px; height: 24px;">Undo</button>
         </div>
         <div style="display: inline-block;">
-          <button id="btn-remove-redo">Redo</button>
+          <button id="btn-op-redo" style="width: 100px; height: 24px;">Redo</button>
         </div>
       </div>
 
-      <div style="display: inline-block;">
-        <div style="display: inline-block;">
-          <button id="btn-remove-color">Pick & Remove Color</button>
-        </div>
-        <div style="display: inline-block;">
-          <label>With Threshold:</label><input value="15" type="number" id="threshold">
+      <div class="separation"></div>
+
+      <div>
+        <div class="row">
+          <div class="col">
+            <button id="btn-remove-color" style="width: 200px; height: 24px;">Pick & Remove Color</button>
+          </div>
+          <div class="col">
+            <label>With Threshold:</label><input value="15" type="number" id="threshold-remove" style="width: 50px;">
+          </div>
         </div>
       </div>
+
+      <div class="space"></div>
+
+      <div>
+        <div class="row">
+          <div class="col">
+            <button id="btn-restore-color" style="width: 200px; height: 24px;">Pick & Restore Color</button>
+          </div>
+          <div class="col">
+            <label>With Threshold:</label><input value="15" type="number" id="threshold-restore" style="width: 50px;">
+          </div>
+        </div>
+      </div>
+
+      <div class="separation"></div>
+
+      <div>
+        <div class="row">
+          <div class="col">
+            <button id="btn-draw-text" style="width: 100px; height: 24px;">Draw</button>
+          </div>
+          <div class="col">
+            <label>Text:</label><input value="Hello World!" type="text" id="text-string" style="width: 360px;">
+          </div>
+        </div>
+      </div>
+
+      <div class="space"></div>
+
+      <div>
+        <div class="row">
+          <div class="col">
+            <label>Align:</label>
+            <select id="text-align">
+              <option value="left">Left</option>
+              <option value="center" selected>Center</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+          <div class="col">
+            <label>Baseline:</label>
+            <select id="text-baseline">
+              <option value="start">Start</option>
+              <option value="middle" selected>Middle</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+          <div class="col">
+            <label>Font:</label><input value="bold 18px verdana, sans-serif" type="text" id="text-font" style="width: 212px;">
+          </div>
+        </div>
+      </div>
+
+      <div class="space"></div>
+
+      <div>
+        <div class="row">
+          <div class="col">
+            <label>Color:</label><input value="#0073ff" type="color" id="text-color">
+          </div>
+          <div  class="col">
+            <label>Position X:</label>
+            <input id="pos-x" type="range" min="0" max="1" step="0.1" value="0.5">
+          </div>
+          <div  class="col">
+            <label>Position Y:</label>
+            <input id="pos-y" type="range" min="0" max="1" step="0.1" value="0.5">
+          </div>
+        </div>
+      </div>
+
+      <div class="separation"></div>
 
     </div>
   </div>
@@ -75,6 +151,8 @@
 
     </div>
   </div>
+
+
 
   <div id="container"></div>
 </div>
