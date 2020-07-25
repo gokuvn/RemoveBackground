@@ -87,6 +87,30 @@
       <div>
         <div class="row">
           <div class="col">
+            <label>
+              Filter: <input type=checkbox id="use-filter">
+            </label>
+          </div>
+          <div class="col">
+            <label>Shift Color: <input type=range id="input-hue" max=359 value=0 style="width: 360px;"></label>
+          </div>
+          <div class="col">
+            <label>Apply Saturation: <input type=range id="input-sat" value=50></label>
+          </div>
+          <div class="col">
+            <label>
+              Adjust Light: <input type=checkbox id="use-val" checked>
+            </label>
+            <input type=range id="input-val" max=200 value=100 disabled>
+          </div>
+        </div>
+      </div>
+
+      <div class="separation"></div>
+
+      <div>
+        <div class="row">
+          <div class="col">
             <button id="btn-draw-text" style="width: 100px; height: 24px;">Draw</button>
           </div>
           <div class="col">

@@ -82,6 +82,8 @@ $(document).ready(function()
   var imgSrc;
   var imgDst;
 
+  var imgCached;
+
   var canvasSrc = document.querySelector(`#canvas-src`);
   var canvasDst = document.querySelector(`#canvas-dst`);
 
@@ -89,27 +91,41 @@ $(document).ready(function()
   var stackRedo = [];
 
   var stackPreProcess = [
+    {
+      mode: MODE_REMOVE,
+      color: [255, 255, 255],
+      threshold: 50
+    },
+    {
+      mode: MODE_REMOVE,
+      color: [0, 0, 0],
+      threshold: 50
+    },
     // {
-    //   mode: MODE_REMOVE,
-    //   color: [255, 255, 255],
-    //   threshold: 10
+    //   mode: MODE_RESTORE,
+    //   color: [255, 0, 0],
+    //   threshold: 1
     // },
+    {
+      mode: MODE_RESTORE,
+      color: [230, 50, 50],
+      threshold: 1
+    },
     // {
-    //   mode: MODE_REMOVE,
-    //   color: [0, 0, 0],
-    //   threshold: 10
+    //   mode: MODE_RESTORE,
+    //   color: [230, 90, 80],
+    //   threshold: 1
     // }
   ];
 
-
-	$('#input-image').change(function(e)
-	{
+  $('#input-image').change(function(e)
+  {
     var url = window.URL.createObjectURL(this.files[0]);
 
     $('#table-images').css('visibility', 'visible');
     $('#controls').css('visibility', 'visible');
 
-		init(url);
+    init(url);
   });
 
   $('#btn-op-undo').click(function(e)
@@ -119,10 +135,12 @@ $(document).ready(function()
       return;
     }
 
-    popStackModifier();
+    var mod = popStackModifier();
 
     updateButtonUndoRedo();
-    updateStackChange();
+
+    var hasRemoveRestore = mod.mode == MODE_REMOVE || mod.MODE_RESTORE;
+    updateImage(!hasRemoveRestore);
   });
 
   $('#btn-op-redo').click(function(e)
@@ -136,7 +154,9 @@ $(document).ready(function()
     stack.push(mod);
 
     updateButtonUndoRedo();
-    updateStackChange();
+
+    var hasRemoveRestore = mod.mode == MODE_REMOVE || mod.MODE_RESTORE;
+    updateImage(!hasRemoveRestore);
   });
 
   $('#btn-remove-color').click(function(e)
@@ -179,7 +199,7 @@ $(document).ready(function()
     var mod = createModifierDrawText(text, font, color, align, baseline, relPosX, relPosY);
     addStackModifier(mod);
 
-    updateStackChange();
+    updateImage(true);
     updateButtonUndoRedo();
   });
 
@@ -193,7 +213,7 @@ $(document).ready(function()
     return parseInt(document.querySelector(`#threshold-restore`).value);
   }
 
-	function canvasLoadImage(url, canvasEl)
+  function canvasLoadImage(url, canvasEl)
   {
     var img = new Image();
     img.src = url;
@@ -201,7 +221,10 @@ $(document).ready(function()
     {
       canvasEl.width = img.width;
       canvasEl.height = img.height;
-      canvasEl.getContext("2d").drawImage(img, 0, 0);
+      var ctx = canvasEl.getContext("2d");
+      // ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+      // ctx.globalCompositeOperation = "source-over";
+      ctx.drawImage(img, 0, 0);
     };
 
     return img;
@@ -232,6 +255,88 @@ $(document).ready(function()
     ctx.fillText(opt.text, posX, posY);
   }
 
+  $('#use-filter').change(changeHSL);
+  $('#input-hue').change(changeHSL);
+  $('#input-sat').change(changeHSL);
+  $('#input-val').change(changeHSL);
+  $('#use-val').change(function()
+  {
+    var useVal = $('#use-val').is(":checked");
+    if (useVal)
+    {
+      $('#input-val').removeAttr("disabled");
+    }
+    else
+    {
+      $('#input-val').attr("disabled", true);
+    }
+    changeHSL();
+  });
+
+  function changeHSL()
+  {
+    // filterHSL();
+    updateImage(true);
+  }
+
+  function filterHSL()
+  {
+    var c = canvasDst;
+    var ctx = c.getContext('2d');
+
+    if (!$('#use-filter').is(":checked"))
+    {
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.globalCompositeOperation = "source-over";
+      ctx.drawImage(imgCached, 0, 0, c.width, c.height);
+
+      return;
+    }
+
+    var hue = $('#input-hue').val();
+    var sat = $('#input-sat').val();
+    var val = $('#input-val').val();
+    var useVal = $('#use-val').is(":checked");
+
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.drawImage(imgCached, 0, 0, c.width, c.height);
+
+    if (!useVal)
+    {
+      // use color blending mode
+      ctx.globalCompositeOperation = "color";
+      ctx.fillStyle = "hsl(" + hue + "," + sat + "%, 50%)";
+      ctx.fillRect(0, 0, c.width, c.height);
+    }
+    else
+    {
+      // adjust light
+      ctx.globalCompositeOperation = val < 100 ? "color-burn" : "color-dodge";
+      // for common slider, to produce a valid value for both directions
+      val = val >= 100 ? val - 100 : 100 - (100 - val);
+      ctx.fillStyle = "hsl(0, 50%, " + val + "%)";
+      ctx.fillRect(0, 0, c.width, c.height);
+
+      // adjust saturation
+      ctx.globalCompositeOperation = "saturation";
+      ctx.fillStyle = "hsl(0," + sat + "%, 50%)";
+      ctx.fillRect(0, 0, c.width, c.height);
+
+      // adjust hue
+      ctx.globalCompositeOperation = "hue";
+      ctx.fillStyle = "hsl(" + hue + ",1%, 50%)";
+      ctx.fillRect(0, 0, c.width, c.height);
+    }
+
+    // clip
+    ctx.globalCompositeOperation = "destination-in";
+    ctx.drawImage(imgCached, 0, 0, c.width, c.height);
+
+    // reset comp. mode to default
+    ctx.globalCompositeOperation = "source-over";
+  }
+
   function init(url)
   {
     imageUrl = url;
@@ -243,9 +348,11 @@ $(document).ready(function()
 
     colorSamplerOff();
 
-    updateStackChange();
-
-    updateButtonUndoRedo();
+    setTimeout(function()
+    {
+      updateImage();
+      updateButtonUndoRedo();
+    }, 100);
   }
 
   function canvasGetImageDataUrl(canvas)
@@ -257,9 +364,7 @@ $(document).ready(function()
   {
     $('#canvas-src').colorSampler(
     {
-      onPreview: function(color)
-      {
-      },
+      onPreview: function(color) {},
       onSelect: function(color)
       {
         onSamplerSelectColor(color.match(/\d+/g));
@@ -267,21 +372,19 @@ $(document).ready(function()
     });
 
     $('#canvas-dst').colorSampler(
+    {
+      onPreview: function(color) {},
+      onSelect: function(color)
       {
-        onPreview: function(color)
-        {
-        },
-        onSelect: function(color)
-        {
-          onSamplerSelectColor(color.match(/\d+/g));
-        }
-      });
+        onSamplerSelectColor(color.match(/\d+/g));
+      }
+    });
   }
 
   function colorSamplerOff()
   {
-    $('#canvas-src').off("colorSampler", "**" );
-    $('#canvas-dst').off("colorSampler", "**" );
+    $('#canvas-src').off("colorSampler", "**");
+    $('#canvas-dst').off("colorSampler", "**");
     $('#canvas-src').unbind();
     $('#canvas-dst').unbind();
 
@@ -296,7 +399,7 @@ $(document).ready(function()
     {
       console.log("ERROR");
     }
-    else if(modePick == MODE_REMOVE)
+    else if (modePick == MODE_REMOVE)
     {
       var threshold = getThresholdRemove();
       var mod = createModifierRemove(color, threshold);
@@ -305,7 +408,7 @@ $(document).ready(function()
 
       endModRemoveColor();
     }
-    else if(modePick == MODE_RESTORE)
+    else if (modePick == MODE_RESTORE)
     {
       var threshold = getThresholdRestore();
       var mod = createModifierRestore(color, threshold);
@@ -315,7 +418,7 @@ $(document).ready(function()
       endModRestoreColor();
     }
 
-    updateStackChange();
+    updateImage();
 
     updateButtonUndoRedo();
   }
@@ -376,6 +479,8 @@ $(document).ready(function()
     stackRedo.push(mod);
 
     updateButtonUndoRedo();
+
+    return mod;
   }
 
   function inStackModifier(mod)
@@ -448,43 +553,68 @@ $(document).ready(function()
     return true;
   }
 
-  function updateStackChange()
+  function updateImage(ignoreRemoveRestoreColor)
   {
-    if (imgSrc && imgDst)
+    if (!(imgSrc && imgDst))
+    {
+      return;
+    }
+
+    if (!ignoreRemoveRestoreColor)
     {
       var pixels = getCanvasPixels(canvasSrc);
 
-      pixels = processImageStackModifiers(pixels, stackPreProcess);
+      if (stackPreProcess.length)
+      {
+        pixels = processImageStackModifiers(pixels, stackPreProcess);
+
+        canvasPutImage(canvasDst, pixels);
+      }
 
       var stackRemoveRestoreColor = stack.filter(function(m)
       {
         return m.mode == MODE_REMOVE || m.mode == MODE_RESTORE;
       });
 
-      pixels = processImageStackModifiers(pixels, stackRemoveRestoreColor);
+      if (stackRemoveRestoreColor.length)
+      {
+        pixels = processImageStackModifiers(pixels, stackRemoveRestoreColor);
 
-      canvasPutImage(canvasDst, pixels);
+        canvasPutImage(canvasDst, pixels);
+      }
+
+      imgCached = new Image();
+      imgCached.src = canvasGetImageDataUrl(canvasDst);
+    }
+
+    setTimeout(function()
+    {
+      filterHSL();
 
       var stackDraw = stack.filter(function(m)
       {
         return m.mode == MODE_DRAW_TEXT;
       });
 
-      processImageStackModifiersToCanvas(canvasDst, stackDraw);
-    }
+      if (stackDraw.length)
+      {
+        processImageStackModifiersToCanvas(canvasDst, stackDraw);
+      }
 
-    // setTimeout(function()
-    // {
-    //   var imageDataUrl = canvasDst.toDataURL("image/png");
-    //   canvasLoadImage(imageDataUrl, canvasDst);
-    // }, 100);
+      // setTimeout(function()
+      // {
+      //   var imageDataUrl = canvasDst.toDataURL("image/png");
+      //   canvasLoadImage(imageDataUrl, canvasDst);
+      // }, 100);
 
-    if (stack.length)
-    {
-      setTimeout(function() {
-        showDownloadImageButton();
-      }, 100);
-    }
+      if (stackPreProcess.length || stack.length)
+      {
+        setTimeout(function()
+        {
+          showSaveImageButtons();
+        }, 100);
+      }
+    });
   }
 
   function updateButtonUndoRedo()
@@ -706,12 +836,32 @@ $(document).ready(function()
     }
   }
 
-  function showDownloadImageButton()
+  function showSaveImageButtons()
   {
     var container = $('#container');
     container.html('');
     var imageDataUrl = canvasGetImageDataUrl(canvasDst);
-    container.append(`<span id="og"><a id="btn-save" download="stamp.png" href='${imageDataUrl}'>⬇</a></span><br>`);
+    var containerHtml = '';
+    containerHtml += `<span id="og"><a id="btn-copy" href='#'>Copy</a></span><br>`;
+    containerHtml += `<span id="og"><a id="btn-download" download="stamp.png" href='${imageDataUrl}'>Download</a></span><br>`;
+    container.append(containerHtml);
+    setTimeout(function()
+    {
+      $('#btn-copy').click(function()
+      {
+        canvasDst.toBlob(function(blob)
+        {
+          const item = new ClipboardItem(
+          {
+            "image/png": blob
+          });
+          navigator.clipboard.write([item]);
+          alert("Image Copied!");
+        });
+
+        return false;
+      });
+    }, 0);
   }
 
   function convertImageUrlToDataUrl(url, callback)
