@@ -379,6 +379,9 @@ $(document).ready(function()
         onSamplerSelectColor(color.match(/\d+/g));
       }
     });
+
+    $('.color-sampler-preview').addClass('active');
+    $('.color-sampler-preview').show();
   }
 
   function colorSamplerOff()
@@ -389,6 +392,7 @@ $(document).ready(function()
     $('#canvas-dst').unbind();
 
     $('.color-sampler-preview.active').removeClass('active');
+    $('.color-sampler-preview.active').hide();
   }
 
   function onSamplerSelectColor(color)
@@ -842,8 +846,10 @@ $(document).ready(function()
     container.html('');
     var imageDataUrl = canvasGetImageDataUrl(canvasDst);
     var containerHtml = '';
+    containerHtml += '<div style="text-align: center;">';
     containerHtml += `<span id="og"><a id="btn-copy" href='#'>Copy</a></span><br>`;
     containerHtml += `<span id="og"><a id="btn-download" download="stamp.png" href='${imageDataUrl}'>Download</a></span><br>`;
+    containerHtml += '</div>';
     container.append(containerHtml);
     setTimeout(function()
     {
@@ -875,7 +881,7 @@ $(document).ready(function()
       canvas.height = img.height;
 
       ctx.drawImage(img, 0, 0);
-      return canvas.toDataURL('image/jpeg');
+      return canvas.toDataURL('image/png');
     }
 
     var img = document.createElement('img');
