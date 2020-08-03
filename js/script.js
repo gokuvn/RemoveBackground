@@ -898,7 +898,7 @@ $(document).ready(function()
     // $('#table-images').css('visibility', 'visible');
     // $('#controls').css('visibility', 'visible');
 
-    // init("./res/sample.png");
+    // init("./res/stamp.png");
     // setTimeout(function()
     // {
     //   var imageDataUrl = canvasSrc.toDataURL("image/png");
@@ -907,7 +907,7 @@ $(document).ready(function()
 
     // (async function()
     // {
-    //   let blob = await fetch("./res/sample.png").then(r => r.blob());
+    //   let blob = await fetch("./res/stamp.png").then(r => r.blob());
     //   let dataUrl = await new Promise(resolve =>
     //   {
     //     let reader = new FileReader();
@@ -921,7 +921,7 @@ $(document).ready(function()
     //   init(dataUrl);
     // })();
 
-    convertImageUrlToDataUrl('./res/sample.png', function(dataUrl)
+    convertImageUrlToDataUrl('./res/stamp.png', function(dataUrl)
     {
       $('#table-images').css('visibility', 'visible');
       $('#controls').css('visibility', 'visible');
