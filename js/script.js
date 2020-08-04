@@ -255,10 +255,10 @@ $(document).ready(function()
     ctx.fillText(opt.text, posX, posY);
   }
 
-  $('#use-filter').change(changeHSL);
-  $('#input-hue').change(changeHSL);
-  $('#input-sat').change(changeHSL);
-  $('#input-val').change(changeHSL);
+  $('#use-filter').change(changeParameters);
+  $('#input-hue').change(changeParameters);
+  $('#input-sat').change(changeParameters);
+  $('#input-val').change(changeParameters);
   $('#use-val').change(function()
   {
     var useVal = $('#use-val').is(":checked");
@@ -270,12 +270,26 @@ $(document).ready(function()
     {
       $('#input-val').attr("disabled", true);
     }
-    changeHSL();
+    changeParameters();
   });
 
-  function changeHSL()
+  $('#background-color').change(changeParameters);
+  $('#use-background').change(function()
   {
-    // filterHSL();
+    var useVal = $('#use-background').is(":checked");
+    if (useVal)
+    {
+      $('#background-color').removeAttr("disabled");
+    }
+    else
+    {
+      $('#background-color').attr("disabled", true);
+    }
+    changeParameters();
+  });
+
+  function changeParameters()
+  {
     updateImage(true);
   }
 
@@ -328,12 +342,27 @@ $(document).ready(function()
       ctx.fillStyle = "hsl(" + hue + ",1%, 50%)";
       ctx.fillRect(0, 0, c.width, c.height);
     }
-
     // clip
     ctx.globalCompositeOperation = "destination-in";
     ctx.drawImage(imgCached, 0, 0, c.width, c.height);
 
     // reset comp. mode to default
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  function fillBackground()
+  {
+    var c = canvasDst;
+    var ctx = c.getContext('2d');
+
+    // background color
+    if ( $('#use-background').is(":checked"))
+    {
+      ctx.globalCompositeOperation = "destination-over";
+      ctx.fillStyle = $('#background-color').val();
+      ctx.fillRect(0, 0, c.width, c.height);
+    }
+
     ctx.globalCompositeOperation = "source-over";
   }
 
@@ -594,6 +623,8 @@ $(document).ready(function()
     setTimeout(function()
     {
       filterHSL();
+
+      fillBackground();
 
       var stackDraw = stack.filter(function(m)
       {
