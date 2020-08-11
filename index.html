@@ -92,8 +92,10 @@
               Background:
             </label>
           </div>
-          <div class="col">
-            <label>Color:</label><input value="#ffffff" type="color" id="background-color" disabled>
+          <div id="container-background" class="disabled">
+            <div class="col">
+              <label>Color:</label><input value="#ffffff" type="color" id="background-color" disabled>
+            </div>
           </div>
         </div>
       </div>
@@ -108,17 +110,19 @@
               Filter:
             </label>
           </div>
-          <div class="col">
-            <label>Shift Color: <input type=range id="input-hue" max=359 value=0 style="width: 360px;"></label>
-          </div>
-          <div class="col">
-            <label>Apply Saturation: <input type=range id="input-sat" value=50></label>
-          </div>
-          <div class="col">
-            <label>
-              Adjust Light: <input type=checkbox id="use-val" checked>
-            </label>
-            <input type=range id="input-val" max=200 value=100 disabled>
+          <div id="container-filter" class="disabled">
+            <div class="col">
+              <label>Shift Color: <input type=range id="input-hue" max=359 value=0 style="width: 360px;"></label>
+            </div>
+            <div class="col">
+              <label>Apply Saturation: <input type=range id="input-sat" value=50></label>
+            </div>
+            <div class="col">
+              <label>
+                Adjust Light: <input type=checkbox id="use-val" checked>
+              </label>
+              <input type=range id="input-val" max=200 value=100>
+            </div>
           </div>
         </div>
       </div>

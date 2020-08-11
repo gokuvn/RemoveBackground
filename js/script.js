@@ -115,6 +115,11 @@ $(document).ready(function()
     //   mode: MODE_RESTORE,
     //   color: [230, 90, 80],
     //   threshold: 1
+    // },
+    // {
+    //   mode: MODE_REMOVE,
+    //   color: [145, 115, 105],
+    //   threshold: 10
     // }
   ];
 
@@ -139,7 +144,7 @@ $(document).ready(function()
 
     updateButtonUndoRedo();
 
-    var hasRemoveRestore = mod.mode == MODE_REMOVE || mod.MODE_RESTORE;
+    var hasRemoveRestore = mod.mode == MODE_REMOVE || mod.mode == MODE_RESTORE;
     updateImage(!hasRemoveRestore);
   });
 
@@ -155,7 +160,7 @@ $(document).ready(function()
 
     updateButtonUndoRedo();
 
-    var hasRemoveRestore = mod.mode == MODE_REMOVE || mod.MODE_RESTORE;
+    var hasRemoveRestore = mod.mode == MODE_REMOVE || mod.mode == MODE_RESTORE;
     updateImage(!hasRemoveRestore);
   });
 
@@ -252,10 +257,33 @@ $(document).ready(function()
     var posX = canvasEl.width * opt.relPosX;
     var posY = canvasEl.height * opt.relPosY;
 
+    // add text shadow
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+    ctx.shadowBlur = 1;
+    ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+
     ctx.fillText(opt.text, posX, posY);
+
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = null;
   }
 
-  $('#use-filter').change(changeParameters);
+  $('#use-filter').change(function()
+  {
+    var useFilter = $('#use-filter').is(":checked");
+    if (!useFilter)
+    {
+      $('#container-filter').addClass("disabled");
+    }
+    else
+    {
+      $('#container-filter').removeClass("disabled");
+    }
+    changeParameters();
+  });
   $('#input-hue').change(changeParameters);
   $('#input-sat').change(changeParameters);
   $('#input-val').change(changeParameters);
@@ -280,13 +308,35 @@ $(document).ready(function()
     if (useVal)
     {
       $('#background-color').removeAttr("disabled");
+      $('#container-background').removeClass("disabled");
     }
     else
     {
       $('#background-color').attr("disabled", true);
+      $('#container-background').addClass("disabled");
     }
     changeParameters();
   });
+  document.querySelector('#background-color').oninput = function()
+  {
+    changeParameters();
+  };
+
+  document.querySelector('#input-hue').oninput = function()
+  {
+    var valHue = this.value;
+    $('input#input-sat').css("background", `linear-gradient(to right, hsl(${valHue}, 0%, 50%) 0%, hsl(${valHue}, 100%, 50%) 100%)`);
+    $('input#input-val').css("background", `linear-gradient(to right, hsl(${valHue}, 100%, 0%) 0%, hsl(${valHue}, 100%, 50%) 50%, hsl(${valHue}, 100%, 100%) 100%)`);
+    changeParameters();
+  };
+  document.querySelector('#input-sat').oninput = function()
+  {
+    changeParameters();
+  };
+  document.querySelector('#input-val').oninput = function()
+  {
+    changeParameters();
+  };
 
   function changeParameters()
   {
@@ -342,9 +392,12 @@ $(document).ready(function()
       ctx.fillStyle = "hsl(" + hue + ",1%, 50%)";
       ctx.fillRect(0, 0, c.width, c.height);
     }
+
+    // ctx.filter = 'blur(1px)';
     // clip
     ctx.globalCompositeOperation = "destination-in";
     ctx.drawImage(imgCached, 0, 0, c.width, c.height);
+    // ctx.filter = '';
 
     // reset comp. mode to default
     ctx.globalCompositeOperation = "source-over";
@@ -878,8 +931,9 @@ $(document).ready(function()
     var imageDataUrl = canvasGetImageDataUrl(canvasDst);
     var containerHtml = '';
     containerHtml += '<div style="text-align: center;">';
-    containerHtml += `<span id="og"><a id="btn-copy" href='#'>Copy</a></span><br>`;
-    containerHtml += `<span id="og"><a id="btn-download" download="stamp.png" href='${imageDataUrl}'>Download</a></span><br>`;
+    containerHtml += `<div class="col"><a id="btn-copy" href='#'>Copy</a></div>`;
+    containerHtml += `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
+    containerHtml += `<div class="col"><a id="btn-download" download="stamp.png" href='${imageDataUrl}'>Download</a></div>`;
     containerHtml += '</div>';
     container.append(containerHtml);
     setTimeout(function()
